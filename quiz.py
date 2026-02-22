@@ -20,11 +20,11 @@ def generate_quiz_data(num_questions: int = 5) -> Dict:
         Dict with success status and error message or question count
     """
     if not current_video.transcript:
-        return {"success": False, "error": "Please process a video first!"}
+        return {"success": False, "error": "Please process a video or PDF first!"}
     
     print(f"\nGenerating {num_questions} quiz questions...")
     
-    prompt = f"""Create {num_questions} multiple choice questions based on this lecture.
+    prompt = f"""Create {num_questions} multiple choice questions based on this content (lecture or document).
 
 Format EXACTLY like this (use ### as separator):
 

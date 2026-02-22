@@ -5,20 +5,22 @@ Data models and state management for AtlasMind
 from typing import Dict, List, Optional
 
 class VideoState:
-    """Manages current video information"""
+    """Manages current content (video or PDF) for RAG/quiz/notes."""
     def __init__(self):
         self.transcript = ""
-        self.video_id = ""
+        self.video_id = ""   # content_id: YouTube video ID or pdf_<hash>
         self.collection = None
-    
+        self.source_type = ""  # "video" | "pdf"
+
     def reset(self):
-        """Reset video state"""
+        """Reset content state"""
         self.transcript = ""
         self.video_id = ""
         self.collection = None
-    
+        self.source_type = ""
+
     def is_loaded(self) -> bool:
-        """Check if a video is currently loaded"""
+        """Check if content is currently loaded (video or PDF)"""
         return bool(self.transcript and self.video_id)
 
 

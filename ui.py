@@ -3,7 +3,7 @@ AtlasMind – Modern Premium UI Implementation
 """
 
 import gradio as gr
-from rag import process_video, answer_question, generate_notes
+from rag import process_content, answer_question, generate_notes
 from quiz import start_quiz, check_answer, next_question
 from config import APP_TITLE, APP_DESCRIPTION
 
@@ -105,6 +105,13 @@ input:focus, textarea:focus {
     filter: brightness(1.1);
 }
 
+/* Process button loading state */
+.primary-btn:disabled, button.primary-btn.processing {
+    opacity: 0.75 !important;
+    cursor: wait !important;
+    filter: brightness(0.9);
+}
+
 /* Footer */
 .footer-text {
     text-align: center;
@@ -125,18 +132,25 @@ def create_ui():
             gr.HTML(f"<h1>{APP_TITLE}</h1>")
             gr.HTML(f"<p>{APP_DESCRIPTION}</p>")
 
-        # 2. Hero Action (Video URL Input)
+        # 2. Hero Action (Video URL or PDF Upload)
         with gr.Column(elem_classes="card-wrapper"):
             gr.Markdown("### **Analysis Engine**")
+            gr.Markdown("Provide **either** a video link **or** upload a PDF. You'll get notes, summary, and quiz for the same pipeline.")
             with gr.Row(variant="compact"):
                 video_input = gr.Textbox(
-                    placeholder="Enter YouTube lecture URL to begin...",
-                    scale=4,
+                    placeholder="Enter YouTube lecture URL...",
+                    scale=3,
                     show_label=False,
                     container=False
                 )
-                process_btn = gr.Button("Process Video", variant="primary", elem_classes="primary-btn", scale=1)
-            
+                pdf_input = gr.File(
+                    label=None,
+                    file_types=[".pdf"],
+                    type="filepath",
+                    scale=1
+                )
+            with gr.Row():
+                process_btn = gr.Button("Process", variant="primary", elem_classes="primary-btn")
             summary_output = gr.Markdown(label="Processing Status")
 
         # 3. Features Tab Section
@@ -150,15 +164,16 @@ def create_ui():
                         lines=2,
                         label="Ask the AI Assistant"
                     )
-                    ask_btn = gr.Button("Query Transcript", variant="primary", elem_classes="primary-btn")
+                    ask_btn = gr.Button("Ask Assistant", variant="primary", elem_classes="primary-btn")
                     answer_output = gr.Markdown(label="Response")
 
             # --- NOTES TAB ---
             with gr.Tab("Study Notes", id="notes_tab"):
                 with gr.Column(elem_classes="card-wrapper"):
-                    gr.Markdown("### **AI-Structured Summary**")
-                    notes_btn = gr.Button("Generate Study Guide", variant="primary", elem_classes="primary-btn")
+                    gr.Markdown("### **Detailed Study Notes**")
+                    notes_btn = gr.Button("Generate Notes", variant="primary", elem_classes="primary-btn")
                     notes_output = gr.Markdown()
+                    notes_download = gr.DownloadButton("Download Notes", visible=False)
 
             # --- QUIZ TAB ---
             with gr.Tab("Assessment", id="quiz_tab"):
@@ -191,8 +206,8 @@ def create_ui():
 
         # --- EVENT LISTENERS (Logic maintained) ---
         process_btn.click(
-            fn=process_video,
-            inputs=video_input,
+            fn=process_content,
+            inputs=[video_input, pdf_input],
             outputs=summary_output
         )
 
@@ -202,10 +217,16 @@ def create_ui():
             outputs=answer_output
         )
 
+        def _notes_with_download():
+            notes, path = generate_notes()
+            if path:
+                return notes, gr.update(value=path, visible=True)
+            return notes, gr.update(visible=False)
+
         notes_btn.click(
-            fn=generate_notes,
+            fn=_notes_with_download,
             inputs=None,
-            outputs=notes_output
+            outputs=[notes_output, notes_download]
         )
 
         start_quiz_btn.click(

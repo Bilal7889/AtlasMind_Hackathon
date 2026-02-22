@@ -31,5 +31,5 @@ TRANSCRIPT_PREVIEW_LENGTH = 8000
 # ==================== UI Configuration ====================
 # Removed emoji for a cleaner, professional structured look.
 APP_TITLE = "AtlasMind"
-APP_DESCRIPTION = "Transform YouTube lectures into interactive learning experiences using RAG"
-APP_SUBTITLE = "Using yt-dlp for reliable transcript fetching"
+APP_DESCRIPTION = "Paste a video link or upload a PDF — get notes, summary, and quiz."
+APP_SUBTITLE = "Video (YouTube) or PDF • RAG + Groq + ChromaDB"
