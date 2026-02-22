@@ -32,26 +32,26 @@ def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVE
     return chunks
 
 
-def store_in_vector_db(video_id: str, transcript: str):
+def store_in_vector_db(content_id: str, text: str):
     """
-    Store transcript chunks in ChromaDB
-    
+    Store text chunks in ChromaDB (works for video transcript or PDF content).
+
     Args:
-        video_id: YouTube video ID
-        transcript: Full transcript text
-    
+        content_id: Unique id (e.g. YouTube video_id or pdf_<hash>)
+        text: Full text to chunk and embed
+
     Returns:
         ChromaDB collection object or None if failed
     """
     try:
-        collection_name = f"video_{video_id}"
+        collection_name = f"content_{content_id}"
         try:
             chroma_client.delete_collection(collection_name)
         except:
             pass
         collection = chroma_client.create_collection(collection_name)
-        
-        chunks = chunk_text(transcript)
+
+        chunks = chunk_text(text)
         embeddings = embedding_model.encode(chunks).tolist()
         collection.add(
             embeddings=embeddings,

@@ -11,6 +11,7 @@ def main():
     print("="*60)
     
     demo = create_ui()
+    demo.queue()  # Required for progress bar to show during execution
     demo.launch()
 
 
