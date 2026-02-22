@@ -9,8 +9,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # ==================== API Configuration ====================
-# We remove the hardcoded fallback to ensure security.
-# If the key is missing from .env, the app will now explicitly notify you.
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 if not GROQ_API_KEY:
@@ -29,7 +27,6 @@ QUIZ_CONTEXT_LENGTH = 6000
 TRANSCRIPT_PREVIEW_LENGTH = 8000
 
 # ==================== UI Configuration ====================
-# Removed emoji for a cleaner, professional structured look.
 APP_TITLE = "AtlasMind"
-APP_DESCRIPTION = "Transform YouTube lectures into interactive learning experiences using RAG"
+APP_DESCRIPTION = "Transform YouTube lectures and PDF documents into interactive learning experiences using RAG"
 APP_SUBTITLE = "Using yt-dlp for reliable transcript fetching"

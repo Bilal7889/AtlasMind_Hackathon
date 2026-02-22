@@ -2,10 +2,11 @@
 RAG (Retrieval Augmented Generation) functions for AtlasMind
 """
 
-from models import current_video
+from models import video_state, pdf_state, get_active_state, set_active_source
 from vector_db import semantic_search, chunk_text
 from llm import ask_groq
 from config import TRANSCRIPT_PREVIEW_LENGTH
+from pdf_processor import extract_text_from_pdf
 
 
 def process_video(video_url: str) -> str:
@@ -22,24 +23,31 @@ def process_video(video_url: str) -> str:
     from vector_db import store_in_vector_db
     
     if not video_url or not video_url.strip():
-        return "Please enter a YouTube URL!"
+        return "❌ **Error:** Please enter a YouTube URL!"
     
     print("\n" + "="*60)
     print("PROCESSING VIDEO (using yt-dlp)")
     print("="*60)
     
     # Fetch transcript
+    status_msg = "🔄 **Step 1/3:** Fetching transcript from YouTube...\n\nThis may take 10-30 seconds depending on video length."
+    print(status_msg)
+    
     result = fetch_transcript_ytdlp(video_url)
     if not result["success"]:
-        return result["error"]
+        return f"❌ **Error:** {result['error']}"
     
     # Store in vector DB
-    current_video.transcript = result["transcript"]
-    current_video.video_id = result["video_id"]
-    current_video.collection = store_in_vector_db(result["video_id"], result["transcript"])
+    print("🔄 Step 2/3: Storing in vector database...")
+    video_state.transcript = result["transcript"]
+    video_state.video_id = result["video_id"]
+    video_state.collection = store_in_vector_db(result["video_id"], result["transcript"])
+    
+    # Set as active source
+    set_active_source("video")
     
     # Generate summary
-    print("Generating AI summary...")
+    print("🔄 Step 3/3: Generating AI summary...")
     prompt = f"""You are AtlasMind, an AI learning companion.
 
 Analyze this lecture and provide:
@@ -57,14 +65,82 @@ Transcript: {result['transcript'][:TRANSCRIPT_PREVIEW_LENGTH]}"""
     
     summary = ask_groq(prompt)
     
-    print("Summary generated!")
+    print("✅ Summary generated!")
     print("="*60 + "\n")
     
-    return f"""**Video Processed Successfully!**
+    return f"""✅ **Video Processed Successfully!**
 
 **Video ID:** {result['video_id']}  
 **Transcript Length:** {len(result['transcript'])} characters  
 **Chunks Stored:** {len(chunk_text(result['transcript']))}
+
+---
+
+{summary}"""
+
+
+def process_pdf(pdf_file) -> str:
+    """
+    Process PDF document: Extract text, store in DB, generate summary
+    
+    Args:
+        pdf_file: Gradio file upload object
+    
+    Returns:
+        Summary and processing status
+    """
+    from vector_db import store_in_vector_db
+    
+    if not pdf_file:
+        return "❌ **Error:** Please upload a PDF file!"
+    
+    print("\n" + "="*60)
+    print("PROCESSING PDF DOCUMENT")
+    print("="*60)
+    
+    # Extract text from PDF
+    print("🔄 Step 1/3: Extracting text from PDF...")
+    result = extract_text_from_pdf(pdf_file)
+    if not result["success"]:
+        return f"❌ **Error:** {result['error']}"
+    
+    # Store in vector DB
+    print("🔄 Step 2/3: Storing in vector database...")
+    pdf_state.transcript = result["text"]
+    pdf_state.video_id = result["pdf_id"]
+    pdf_state.collection = store_in_vector_db(result["pdf_id"], result["text"])
+    
+    # Set as active source
+    set_active_source("pdf")
+    
+    # Generate summary
+    print("🔄 Step 3/3: Generating AI summary...")
+    prompt = f"""You are AtlasMind, an AI learning companion.
+
+Analyze this document and provide:
+
+## 📝 Summary
+A concise 3-4 sentence overview.
+
+## 🔑 Key Concepts
+5-7 most important points as bullets.
+
+## 💡 Takeaways
+3-5 actionable insights.
+
+Content: {result['text'][:TRANSCRIPT_PREVIEW_LENGTH]}"""
+    
+    summary = ask_groq(prompt)
+    
+    print("✅ Summary generated!")
+    print("="*60 + "\n")
+    
+    return f"""✅ **PDF Processed Successfully!**
+
+**Filename:** {result['filename']}  
+**Pages:** {result['num_pages']}  
+**Text Length:** {len(result['text'])} characters  
+**Chunks Stored:** {len(chunk_text(result['text']))}
 
 ---
 
@@ -81,17 +157,19 @@ def answer_question(question: str) -> str:
     Returns:
         Answer based on video context
     """
-    if not current_video.transcript:
-        return "Please process a video first!"
+    active_state = get_active_state()
+    
+    if not active_state.transcript:
+        return "Please process a video or PDF first!"
     
     if not question or not question.strip():
         return "Please enter a question!"
     
     print(f"\nQuestion: {question}")
     
-    context = semantic_search(question, current_video.collection)
+    context = semantic_search(question, active_state.collection)
     if not context:
-        context = current_video.transcript[:3000]
+        context = active_state.transcript[:3000]
     
     print(f"Found relevant context ({len(context)} chars)")
     
@@ -115,8 +193,10 @@ def generate_notes() -> str:
     Returns:
         Formatted study notes
     """
-    if not current_video.transcript:
-        return "Please process a video first!"
+    active_state = get_active_state()
+    
+    if not active_state.transcript:
+        return "Please process a video or PDF first!"
     
     print("\nGenerating study notes...")
     
@@ -136,7 +216,7 @@ Format:
 ## 🎯 Important Concepts
 [Core concepts to remember]
 
-Transcript: {current_video.transcript[:6000]}"""
+Transcript: {active_state.transcript[:6000]}"""
     
     notes = ask_groq(prompt)
     print("Notes generated!\n")

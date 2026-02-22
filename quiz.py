@@ -4,7 +4,7 @@ Quiz generation and management for AtlasMind
 
 from typing import Dict, Tuple
 import gradio as gr
-from models import current_video, quiz_state
+from models import get_active_state, quiz_state
 from llm import ask_groq
 from config import QUIZ_CONTEXT_LENGTH
 
@@ -19,8 +19,10 @@ def generate_quiz_data(num_questions: int = 5) -> Dict:
     Returns:
         Dict with success status and error message or question count
     """
-    if not current_video.transcript:
-        return {"success": False, "error": "Please process a video first!"}
+    active_state = get_active_state()
+    
+    if not active_state.transcript:
+        return {"success": False, "error": "Please process a video or PDF first!"}
     
     print(f"\nGenerating {num_questions} quiz questions...")
     
@@ -39,7 +41,7 @@ EXPLANATION: [2-3 sentence explanation of why this answer is correct]
 QUESTION: [next question]
 ...
 
-Transcript: {current_video.transcript[:QUIZ_CONTEXT_LENGTH]}"""
+Transcript: {active_state.transcript[:QUIZ_CONTEXT_LENGTH]}"""
     
     response = ask_groq(prompt)
     

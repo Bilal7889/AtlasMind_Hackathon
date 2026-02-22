@@ -54,6 +54,24 @@ class QuizState:
         return int((self.score / len(self.questions)) * 100)
 
 
-# Global state instances
-current_video = VideoState()
+# Global state instances - Dual storage for video and PDF
+video_state = VideoState()
+pdf_state = VideoState()
 quiz_state = QuizState()
+
+# Active source tracking
+active_source_type = "video"  # Can be "video" or "pdf"
+
+def get_active_state() -> VideoState:
+    """Get the currently active content state (video or PDF)"""
+    return video_state if active_source_type == "video" else pdf_state
+
+def set_active_source(source_type: str):
+    """Set which content source is active"""
+    global active_source_type
+    if source_type in ["video", "pdf"]:
+        active_source_type = source_type
+        print(f"Active source switched to: {source_type}")
+
+# For backward compatibility
+current_video = get_active_state()
