@@ -1,5 +1,6 @@
 yt-dlp
 groq
+gradio
 chromadb
 sentence-transformers
 pymupdf
