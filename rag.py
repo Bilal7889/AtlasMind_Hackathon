@@ -52,51 +52,64 @@ def process_content(video_url: str = None, pdf_file=None, progress=gr.Progress()
     Returns:
         Summary and processing status
     """
-    from youtube import fetch_transcript_ytdlp
-    from pdf import extract_text_from_pdf
+    try:
+        from youtube import fetch_transcript_ytdlp
+        from pdf import extract_text_from_pdf
+        from config import GROQ_API_KEY
 
-    progress(0, desc="Fetching content...")
-    video_url = (video_url or "").strip()
-    # Gradio file upload can be single path or list of paths
-    pdf_path = None
-    if pdf_file is not None:
-        if isinstance(pdf_file, list) and len(pdf_file) > 0:
-            pdf_path = pdf_file[0] if isinstance(pdf_file[0], str) else getattr(pdf_file[0], "name", None)
-        elif isinstance(pdf_file, str):
-            pdf_path = pdf_file
+        if not GROQ_API_KEY:
+            return "**Configuration error:** `GROQ_API_KEY` is not set. Add it in your Space Settings → Variables and secrets."
 
-    if video_url and pdf_path:
-        return "Please provide either a video link OR a PDF file, not both."
-    if not video_url and not pdf_path:
-        return "Please enter a YouTube URL or upload a PDF file."
+        progress(0, desc="Fetching content...")
+        video_url = (video_url or "").strip()
+        # Gradio file upload: can be path string, list of paths, or FileData with .name
+        pdf_path = None
+        if pdf_file is not None:
+            if isinstance(pdf_file, list) and len(pdf_file) > 0:
+                f = pdf_file[0]
+                pdf_path = f if isinstance(f, str) else getattr(f, "name", getattr(f, "path", None))
+            elif isinstance(pdf_file, str):
+                pdf_path = pdf_file
+            else:
+                pdf_path = getattr(pdf_file, "name", getattr(pdf_file, "path", None))
 
-    progress(0.2, desc="Extracting content...")
-    if video_url:
-        print("\n" + "="*60)
-        print("PROCESSING VIDEO (using yt-dlp)")
-        print("="*60)
-        result = fetch_transcript_ytdlp(video_url)
-        if not result["success"]:
-            return result["error"]
-        content_id = result["video_id"]
-        transcript = result["transcript"]
-        source_label = "Video"
-    else:
-        print("\n" + "="*60)
-        print("PROCESSING PDF")
-        print("="*60)
-        result = extract_text_from_pdf(pdf_path)
-        if not result["success"]:
-            return result["error"]
-        content_id = result["content_id"]
-        transcript = result["transcript"]
-        source_label = "PDF"
+        if video_url and pdf_path:
+            return "Please provide either a video link OR a PDF file, not both."
+        if not video_url and not pdf_path:
+            return "Please enter a YouTube URL or upload a PDF file."
 
-    progress(0.6, desc="Generating summary...")
-    print("="*60 + "\n")
-    result_text = _process_content_text(content_id, transcript, source_label, "video" if video_url else "pdf")
-    progress(1.0, desc="Done!")
-    return result_text
+        progress(0.2, desc="Extracting content...")
+        if video_url:
+            print("\n" + "="*60)
+            print("PROCESSING VIDEO (using yt-dlp)")
+            print("="*60)
+            result = fetch_transcript_ytdlp(video_url)
+            if not result["success"]:
+                return f"**Video error:** {result['error']}"
+            content_id = result["video_id"]
+            transcript = result["transcript"]
+            source_label = "Video"
+        else:
+            print("\n" + "="*60)
+            print("PROCESSING PDF")
+            print("="*60)
+            result = extract_text_from_pdf(pdf_path)
+            if not result["success"]:
+                return f"**PDF error:** {result['error']}"
+            content_id = result["content_id"]
+            transcript = result["transcript"]
+            source_label = "PDF"
+
+        progress(0.6, desc="Generating summary...")
+        print("="*60 + "\n")
+        result_text = _process_content_text(content_id, transcript, source_label, "video" if video_url else "pdf")
+        progress(1.0, desc="Done!")
+        return result_text
+    except Exception as e:
+        import traceback
+        err = traceback.format_exc()
+        print(err)
+        return f"**Error:** {str(e)}\n\nCheck Space logs for details."
 
 
 def answer_question(question: str) -> str:
