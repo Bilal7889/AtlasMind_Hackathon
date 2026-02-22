@@ -444,12 +444,7 @@ def save_notes_as_pdf(notes_content):
     pdf.add_page()
     pdf.set_font("Arial", 'B', 16)
     pdf.cell(0, 10, "AtlasMind Study Notes", ln=True, align='C')
-    pdf.ln(5)
-    
-    pdf.set_font("Arial", '', 10)
-    pdf.cell(0, 6, f"Source: {clean_text(source_name)}", ln=True)
-    pdf.cell(0, 6, f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", ln=True)
-    pdf.ln(5)
+    pdf.ln(10)
     
     # Add content (convert markdown to plain text for PDF)
     pdf.set_font("Arial", '', 11)
@@ -476,14 +471,21 @@ def save_notes_as_pdf(notes_content):
                 pdf.set_font("Arial", 'B', 14)
                 pdf.multi_cell(0, 8, line.replace('#', '').strip())
                 pdf.set_font("Arial", '', 11)
-            # Handle bold
-            elif '**' in line:
-                pdf.set_font("Arial", 'B', 11)
-                pdf.multi_cell(0, 6, line.replace('**', ''))
-                pdf.set_font("Arial", '', 11)
             # Handle bullet points
             elif line.startswith('-') or line.startswith('*'):
-                pdf.multi_cell(0, 6, '  * ' + line[1:].strip())
+                # Check if bullet line has bold text
+                if '**' in line:
+                    # Handle bold within bullet (simple approach: just remove **)
+                    clean_line = line.replace('**', '')
+                    pdf.multi_cell(0, 6, '  * ' + clean_line[1:].strip())
+                else:
+                    pdf.multi_cell(0, 6, '  * ' + line[1:].strip())
+            # Handle lines with bold text (but not as headings)
+            elif '**' in line:
+                # Simple approach: just remove ** markers and keep text normal
+                # This prevents entire lines from becoming bold
+                clean_line = line.replace('**', '')
+                pdf.multi_cell(0, 6, clean_line)
             else:
                 pdf.multi_cell(0, 6, line)
         except Exception as e:
