@@ -4,6 +4,7 @@ gradio
 chromadb
 sentence-transformers
 PyPDF2
+fpdf
 fastapi>=0.115.2
 uvicorn>=0.14.0
 sqlalchemy>=2.0.23

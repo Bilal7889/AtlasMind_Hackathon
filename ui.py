@@ -389,6 +389,111 @@ h1, h2, h3, h4, h5, h6 {
 }
 """
 
+# Helper function for PDF download
+def save_notes_as_pdf(notes_content):
+    """Save notes as PDF file"""
+    import tempfile
+    import os
+    import re
+    from datetime import datetime
+    from models import get_active_state
+    from fpdf import FPDF
+    
+    if not notes_content or notes_content.strip() == "":
+        return None
+    
+    # Clean content - remove emojis and non-Latin-1 characters
+    def clean_text(text):
+        """Remove emojis and special Unicode characters"""
+        # Remove emojis and other non-Latin-1 characters
+        emoji_pattern = re.compile("["
+            u"\U0001F600-\U0001F64F"  # emoticons
+            u"\U0001F300-\U0001F5FF"  # symbols & pictographs
+            u"\U0001F680-\U0001F6FF"  # transport & map symbols
+            u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
+            u"\U00002702-\U000027B0"
+            u"\U000024C2-\U0001F251"
+            "]+", flags=re.UNICODE)
+        text = emoji_pattern.sub(r'', text)
+        
+        # Replace common symbols
+        text = text.replace('✓', 'v')
+        text = text.replace('✗', 'x')
+        text = text.replace('→', '->')
+        text = text.replace('←', '<-')
+        text = text.replace('•', '*')
+        text = text.replace('…', '...')
+        
+        # Keep only Latin-1 compatible characters
+        return ''.join(char if ord(char) < 256 else '?' for char in text)
+    
+    active_state = get_active_state()
+    source_name = active_state.video_id if active_state.is_loaded() else "notes"
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"AtlasMind_Notes_{source_name}_{timestamp}.pdf"
+    
+    # Create temp file
+    temp_dir = tempfile.gettempdir()
+    filepath = os.path.join(temp_dir, filename)
+    
+    # Clean the content
+    clean_content = clean_text(notes_content)
+    
+    # Create PDF
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", 'B', 16)
+    pdf.cell(0, 10, "AtlasMind Study Notes", ln=True, align='C')
+    pdf.ln(5)
+    
+    pdf.set_font("Arial", '', 10)
+    pdf.cell(0, 6, f"Source: {clean_text(source_name)}", ln=True)
+    pdf.cell(0, 6, f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", ln=True)
+    pdf.ln(5)
+    
+    # Add content (convert markdown to plain text for PDF)
+    pdf.set_font("Arial", '', 11)
+    
+    # Simple markdown to PDF conversion
+    lines = clean_content.split('\n')
+    for line in lines:
+        line = line.strip()
+        if not line:
+            pdf.ln(3)
+            continue
+        
+        try:
+            # Handle headers
+            if line.startswith('###'):
+                pdf.set_font("Arial", 'B', 12)
+                pdf.multi_cell(0, 6, line.replace('###', '').strip())
+                pdf.set_font("Arial", '', 11)
+            elif line.startswith('##'):
+                pdf.set_font("Arial", 'B', 13)
+                pdf.multi_cell(0, 7, line.replace('##', '').strip())
+                pdf.set_font("Arial", '', 11)
+            elif line.startswith('#'):
+                pdf.set_font("Arial", 'B', 14)
+                pdf.multi_cell(0, 8, line.replace('#', '').strip())
+                pdf.set_font("Arial", '', 11)
+            # Handle bold
+            elif '**' in line:
+                pdf.set_font("Arial", 'B', 11)
+                pdf.multi_cell(0, 6, line.replace('**', ''))
+                pdf.set_font("Arial", '', 11)
+            # Handle bullet points
+            elif line.startswith('-') or line.startswith('*'):
+                pdf.multi_cell(0, 6, '  * ' + line[1:].strip())
+            else:
+                pdf.multi_cell(0, 6, line)
+        except Exception as e:
+            # Skip problematic lines
+            print(f"Skipping line due to error: {e}")
+            continue
+    
+    pdf.output(filepath)
+    return filepath
+
 def create_ui():
     # Use the Glassmorphism approach for the overall theme
     demo = gr.Blocks(css=CUSTOM_CSS, theme=gr.themes.Default())
@@ -461,6 +566,8 @@ def create_ui():
                     gr.Markdown("### **AI-Structured Summary**", elem_classes="markdown-text")
                     notes_btn = gr.Button("Generate Study Guide", variant="primary", elem_classes="primary-btn")
                     notes_output = gr.Markdown(elem_classes="markdown-text")
+                    
+                    download_pdf_btn = gr.DownloadButton("📥 Export Notes to PDF", visible=False, variant="primary", elem_classes="primary-btn")
 
             # --- QUIZ TAB ---
             with gr.Tab("Assessment", id="quiz_tab"):
@@ -600,20 +707,23 @@ def create_ui():
             ask_btn
         )
 
-        # Disable button, generate notes, then re-enable
+        # Disable button, generate notes, then re-enable and show download button
         notes_btn.click(
-            lambda: gr.update(interactive=False, value="📝 Generating..."),
+            lambda: [gr.update(interactive=False, value="📝 Generating..."), gr.update(visible=False)],
             None,
-            notes_btn,
+            [notes_btn, download_pdf_btn],
             queue=False
         ).then(
             fn=generate_notes,
             inputs=None,
             outputs=notes_output
         ).then(
-            lambda: gr.update(interactive=True, value="Generate Notes"),
-            None,
-            notes_btn
+            lambda notes: [
+                gr.update(interactive=True, value="Generate Study Guide"), 
+                gr.update(visible=True, value=save_notes_as_pdf(notes) if notes and notes.strip() else None)
+            ],
+            inputs=notes_output,
+            outputs=[notes_btn, download_pdf_btn]
         )
 
         # Disable button, build quiz, then re-enable
