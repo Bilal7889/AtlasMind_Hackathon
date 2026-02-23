@@ -1,9 +1,25 @@
-yt-dlp
-groq
-gradio
-chromadb
+# youtube-transcript-api
+# groq
+# gradio
+# chromadb
+# sentence-transformers
+# pymupdf
+# python-docx
+# python-dotenv>=1.0.0
+# pydantic>=2.5.0,<2.11
+# 1. Force CPU-only versions to stay under the 4GB limit
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.2.1+cpu
 sentence-transformers
+
+# 2. RAG and Video Processing
+youtube-transcript-api
+groq
+chromadb
 pymupdf
 python-docx
+
+# 3. UI and Environment
+gradio
 python-dotenv>=1.0.0
 pydantic>=2.5.0,<2.11
