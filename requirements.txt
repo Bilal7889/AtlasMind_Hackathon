@@ -5,7 +5,7 @@ torch>=2.4
 sentence-transformers
 
 # 2. RAG and Video Processing
-youtube-transcript-api
+yt-dlp
 groq
 chromadb
 pymupdf
