@@ -1,6 +1,7 @@
-# 1. Force CPU-only versions to stay under the 4GB limit
+# 1. Pin versions to avoid PyTorch 2.4 / NumPy 2.x conflicts (sentence-transformers + transformers)
+numpy<2
 --extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.2.1+cpu
+torch>=2.4
 sentence-transformers
 
 # 2. RAG and Video Processing
