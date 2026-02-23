@@ -42,7 +42,7 @@ def fetch_transcript_ytdlp(video_url: str) -> Dict:
             "error": "YOUTUBE_TRANSCRIPTOR_API_KEY not set. Add it to your environment / .env.",
         }
 
-    url = "https://youtube-transcriptor.p.rapidapi.com/transcript"
+    url = "https://video-transcript-scraper.p.rapidapi.com"
     headers = {
         "x-rapidapi-host": "youtube-transcriptor.p.rapidapi.com",
         "x-rapidapi-key": api_key,
