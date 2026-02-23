@@ -1,0 +1,15 @@
+[variables]
+    # Keep this matching your previous successful log phase
+    NIXPACKS_PYTHON_VERSION = "3.11" 
+
+[phases.setup]
+    # Installs basic C-libraries needed for your backend dependencies
+    nixPkgs = ["python311", "gcc", "pkg-config"] 
+
+[phases.install]
+    # Standard install but faster because the environment is pre-set
+    cmds = ["pip install --upgrade pip", "pip install -r requirements.txt"]
+
+[phases.start]
+    # This ensures your app starts by running app.py
+    cmd = "python app.py"
